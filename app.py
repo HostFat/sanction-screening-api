@@ -22,6 +22,12 @@ headers = {
     'Accept': 'application/json',
 }
 
+st.set_page_config(
+    page_title="Chainalysis Sanction Address Lookup",
+    page_icon="💰",
+    layout="centered",
+)
+
 st.title("Chainalysis Digital Currency Address Extractor")
 
 # === Table Preparation ===
@@ -72,6 +78,14 @@ for address in addresses:
                 })
         else:
             st.write("No digital currency addresses found.")
+                # Still append the address with "N/A" values
+            extracted_rows.append({
+                "Sanctioned Address": address,
+                "Name": name,
+                "Category": category,
+                "Currency": "None",
+                "Associated Address": "None",
+            })
 
 # === Final Table View ===
 if extracted_rows:
