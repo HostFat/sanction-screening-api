@@ -11,7 +11,9 @@ from components.login import authenticate_user, logout
 
 # Load API key from .env
 load_dotenv()
-api_key = os.getenv('API_KEY')
+# api_key = os.getenv('API_KEY')
+
+api_key = st.secrets['API_KEY']
 
 addresses = [
     'LNwgtMxcKUQ51dw7bQL1yPQjBVZh6QEqsd',
