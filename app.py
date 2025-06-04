@@ -1,12 +1,15 @@
-import requests
-import os
-from dotenv import load_dotenv
-import json
+# app.py
+
 import streamlit as st
+from dotenv import load_dotenv
+import os
+import requests
 import re
 import pandas as pd
 
-# Load environment variables
+from components.login import authenticate_user, logout
+
+# Load API key from .env
 load_dotenv()
 api_key = os.getenv('API_KEY')
 
@@ -28,69 +31,65 @@ st.set_page_config(
     layout="centered",
 )
 
-st.title("Chainalysis Digital Currency Address Extractor")
+if authenticate_user():
+    if st.button("🔒 Logout"):
+        logout()
 
-# === Table Preparation ===
-extracted_rows = []
+    st.title("Chainalysis Digital Currency Address Extractor")
+    extracted_rows = []
 
-# === Detailed View Per Address ===
-for address in addresses:
-    url = f'https://public.chainalysis.com/api/v1/address/{address}'
-    response = requests.get(url, headers=headers)
+    for address in addresses:
+        url = f'https://public.chainalysis.com/api/v1/address/{address}'
+        response = requests.get(url, headers=headers)
 
-    if response.status_code != 200:
-        st.warning(f"Failed to fetch data for {address}")
-        continue
+        if response.status_code != 200:
+            st.warning(f"Failed to fetch data for {address}")
+            continue
 
-    data = response.json()
+        data = response.json()
 
-    with st.expander(f"Sanctioned Address: {address}"):
-        st.json(data)
+        with st.expander(f"Sanctioned Address: {address}"):
+            st.json(data)
 
-        st.subheader('Description Breakdown')
+            st.subheader('Description Breakdown')
+            identifications = data.get("identifications", [])
+            description = ""
+            name = "N/A"
+            category = "N/A"
 
-        identifications = data.get("identifications", [])
-        description = ""
-        name = "N/A"
-        category = "N/A"
+            if identifications and isinstance(identifications, list):
+                id_obj = identifications[0]
+                description = id_obj.get("description", "")
+                name = id_obj.get("name", "N/A")
+                category = id_obj.get("category", "N/A")
 
-        if identifications and isinstance(identifications, list):
-            id_obj = identifications[0]
-            description = id_obj.get("description", "")
-            name = id_obj.get("name", "N/A")
-            category = id_obj.get("category", "N/A")
+            pattern = r"(?:alt\.\s*)?Digital Currency Address - ([A-Z]{2,4}) ([a-zA-Z0-9]{26,64})"
+            matches = re.findall(pattern, description)
 
-        # Regex match for: Digital Currency Address - <SYM> <ADDRESS>
-        pattern = r"(?:alt\.\s*)?Digital Currency Address - ([A-Z]{2,4}) ([a-zA-Z0-9]{26,64})"
-        matches = re.findall(pattern, description)
-
-        if matches:
-            st.write("**Extracted Digital Currency Addresses:**")
-            for abbr, addr in matches:
-                st.badge(f"{abbr} {addr}", color="green", icon="💰")
-                # Append to table data
+            if matches:
+                st.write("**Extracted Digital Currency Addresses:**")
+                for abbr, addr in matches:
+                    st.badge(f"{abbr} {addr}", color="green", icon="💰")
+                    extracted_rows.append({
+                        "Sanctioned Address": address,
+                        "Name": name,
+                        "Category": category,
+                        "Currency": abbr,
+                        "Associated Address": addr,
+                    })
+            else:
+                st.write("No digital currency addresses found.")
                 extracted_rows.append({
                     "Sanctioned Address": address,
                     "Name": name,
                     "Category": category,
-                    "Currency": abbr,
-                    "Associated Address": addr,
+                    "Currency": "None",
+                    "Associated Address": "None",
                 })
-        else:
-            st.write("No digital currency addresses found.")
-                # Still append the address with "N/A" values
-            extracted_rows.append({
-                "Sanctioned Address": address,
-                "Name": name,
-                "Category": category,
-                "Currency": "None",
-                "Associated Address": "None",
-            })
 
-# === Final Table View ===
-if extracted_rows:
-    st.subheader("📊 Extracted Digital Currency Table")
-    df = pd.DataFrame(extracted_rows)
-    st.dataframe(df, use_container_width=True)
-else:
-    st.info("No digital currency addresses extracted.")
+    if extracted_rows:
+        st.subheader("📊 Extracted Digital Currency Table")
+        df = pd.DataFrame(extracted_rows)
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.info("No digital currency addresses extracted.")
