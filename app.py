@@ -9,7 +9,7 @@ from components.login import authenticate_user, logout
 
 # Load API key
 load_dotenv()
-api_key = st.secrets["API_KEY"]
+api_key = 'b212869ae2e19709e66b162d9e969d71861166c63a43b950e611d3fc41fd0c0d'
 
 # Default hardcoded addresses
 initial_addresses = [
